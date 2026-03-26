@@ -4,6 +4,7 @@ import { runDiscoveryScan } from "./discovery/scanner";
 import { evaluateAllTrials } from "./discovery/validator";
 import { runHealthCheck } from "./health/monitor";
 import { runSelfHeal } from "./health/self-heal";
+import { runPredictions } from "./prediction/run-predictions";
 
 export async function handleScheduled(
   event: ScheduledEvent,
@@ -19,8 +20,9 @@ export async function handleScheduled(
       break;
 
     case "*/5 * * * *":
-      // Every 5 minutes: evaluate trial feeds + predictions (Plan 4)
+      // Every 5 minutes: evaluate trial feeds + run predictions
       await evaluateAllTrials(env.DB);
+      await runPredictions(env.DB);
       break;
 
     case "0 * * * *":
