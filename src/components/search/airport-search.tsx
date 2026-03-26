@@ -31,9 +31,9 @@ export function AirportSearch() {
     fetch(`/api/v1/airports?q=${encodeURIComponent(query)}`, {
       signal: controller.signal,
     })
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ airports?: AirportResult[] }>)
       .then((data) => {
-        const airports = (data.airports ?? data) as AirportResult[];
+        const airports = data.airports ?? [];
         setResults(airports.slice(0, 8));
         setActiveIdx(-1);
       })

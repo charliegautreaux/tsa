@@ -10,8 +10,8 @@ async function getOverview(): Promise<AirportOverview[]> {
     next: { revalidate: 30 },
   });
   if (!res.ok) return [];
-  const data = await res.json();
-  return data.airports ?? data;
+  const data = (await res.json()) as { airports?: AirportOverview[] };
+  return data.airports ?? [];
 }
 
 export default async function Home() {
