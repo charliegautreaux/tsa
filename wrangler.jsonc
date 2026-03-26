@@ -47,6 +47,14 @@
     ]
   },
 
+  // Durable Objects migrations
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AirportHub"]
+    }
+  ],
+
   // Cron triggers for data ingestion
   "triggers": {
     "crons": [

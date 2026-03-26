@@ -149,7 +149,7 @@ export async function getRecentReadings(
 export async function getActiveFeeds(db: D1Database): Promise<FeedConfig[]> {
   const result = await db
     .prepare("SELECT * FROM feeds WHERE status IN ('active', 'trial', 'degraded') ORDER BY airport_code")
-    .all<FeedConfig>();
+    .all<Record<string, unknown>>();
   return result.results.map(parseFeedConfig);
 }
 
@@ -157,7 +157,7 @@ export async function getFeedsForAirport(db: D1Database, airportCode: string): P
   const result = await db
     .prepare("SELECT * FROM feeds WHERE airport_code = ?1 AND status IN ('active', 'trial', 'degraded')")
     .bind(airportCode.toUpperCase())
-    .all<FeedConfig>();
+    .all<Record<string, unknown>>();
   return result.results.map(parseFeedConfig);
 }
 
