@@ -7,7 +7,21 @@ export const runtime = "edge";
 export async function GET(request: Request) {
   try {
     const { env } = await getCloudflareContext();
-    const airports = await getAllAirports(env.DB);
+
+    const url = new URL(request.url);
+    const q = url.searchParams.get("q")?.toLowerCase();
+
+    let airports = await getAllAirports(env.DB);
+
+    if (q) {
+      airports = airports.filter(
+        (a) =>
+          a.iata.toLowerCase().includes(q) ||
+          a.name.toLowerCase().includes(q) ||
+          (a.city && a.city.toLowerCase().includes(q)) ||
+          (a.state && a.state.toLowerCase().includes(q))
+      );
+    }
 
     return NextResponse.json({
       count: airports.length,

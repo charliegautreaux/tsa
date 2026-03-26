@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
+import { AirportSearch } from "@/components/search/airport-search";
 
 export function TopNav() {
   return (
@@ -11,7 +12,8 @@ export function TopNav() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <AirportSearch />
           <Link
             href="/report"
             className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
