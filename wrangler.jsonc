@@ -1,0 +1,64 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "preboard",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static assets
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // D1 Database — all application data
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "preboard-db",
+      "database_id": "PASTE_YOUR_D1_DATABASE_ID_HERE",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // KV — hot cache for current waits + map overview
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+    }
+  ],
+
+  // R2 — map tiles, static assets
+  "r2_buckets": [
+    {
+      "binding": "TILES",
+      "bucket_name": "preboard-tiles"
+    }
+  ],
+
+  // Durable Objects — WebSocket hub per airport
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AIRPORT_HUB",
+        "class_name": "AirportHub"
+      }
+    ]
+  },
+
+  // Cron triggers for data ingestion
+  "triggers": {
+    "crons": [
+      "* * * * *",
+      "*/5 * * * *",
+      "0 * * * *",
+      "0 */6 * * *"
+    ]
+  },
+
+  // Environment variables
+  "vars": {
+    "ENVIRONMENT": "production"
+  }
+}
