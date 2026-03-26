@@ -170,6 +170,114 @@ function parseFeedConfig(row: Record<string, unknown>): FeedConfig {
 }
 
 // ============================================================
+// FEED MANAGEMENT (for discovery + health)
+// ============================================================
+
+export async function insertFeed(db: D1Database, feed: {
+  id: string;
+  airport_code: string;
+  checkpoint_id: string | null;
+  type: string;
+  adapter: string;
+  url: string | null;
+  auth_config: string;
+  polling_interval_sec: number;
+  dynamic_mapping: string | null;
+  status: string;
+  discovered_by: string;
+}): Promise<void> {
+  await db
+    .prepare(`
+      INSERT INTO feeds (id, airport_code, checkpoint_id, type, adapter, url, auth_config, polling_interval_sec, dynamic_mapping, status, discovered_by)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+      ON CONFLICT(id) DO NOTHING
+    `)
+    .bind(feed.id, feed.airport_code, feed.checkpoint_id, feed.type, feed.adapter, feed.url, feed.auth_config, feed.polling_interval_sec, feed.dynamic_mapping, feed.status, feed.discovered_by)
+    .run();
+}
+
+export async function updateFeedStatus(db: D1Database, feedId: string, status: string): Promise<void> {
+  await db
+    .prepare("UPDATE feeds SET status = ?2, updated_at = datetime('now') WHERE id = ?1")
+    .bind(feedId, status)
+    .run();
+}
+
+export async function updateFeedReliability(db: D1Database, feedId: string, score: number): Promise<void> {
+  await db
+    .prepare("UPDATE feeds SET reliability_score = ?2, updated_at = datetime('now') WHERE id = ?1")
+    .bind(feedId, score)
+    .run();
+}
+
+export async function getTrialFeeds(db: D1Database): Promise<FeedConfig[]> {
+  const result = await db
+    .prepare("SELECT * FROM feeds WHERE status = 'trial' ORDER BY trial_start_at")
+    .all<Record<string, unknown>>();
+  return result.results.map(parseFeedConfig);
+}
+
+export async function getDegradedFeeds(db: D1Database): Promise<FeedConfig[]> {
+  const result = await db
+    .prepare("SELECT * FROM feeds WHERE status = 'degraded' ORDER BY last_error_at")
+    .all<Record<string, unknown>>();
+  return result.results.map(parseFeedConfig);
+}
+
+export async function getInactiveFeeds(db: D1Database): Promise<FeedConfig[]> {
+  const result = await db
+    .prepare("SELECT * FROM feeds WHERE status IN ('inactive', 'dormant') ORDER BY last_success_at")
+    .all<Record<string, unknown>>();
+  return result.results.map(parseFeedConfig);
+}
+
+export async function getFeedById(db: D1Database, feedId: string): Promise<FeedConfig | null> {
+  const row = await db
+    .prepare("SELECT * FROM feeds WHERE id = ?1")
+    .bind(feedId)
+    .first<Record<string, unknown>>();
+  if (!row) return null;
+  return parseFeedConfig(row);
+}
+
+export async function getFeedErrorRate(db: D1Database, feedId: string): Promise<{ error_count: number; success_count: number }> {
+  const row = await db
+    .prepare("SELECT error_count_1h as error_count, success_count_1h as success_count FROM feeds WHERE id = ?1")
+    .bind(feedId)
+    .first<{ error_count: number; success_count: number }>();
+  return row || { error_count: 0, success_count: 0 };
+}
+
+// ============================================================
+// DISCOVERY LOG
+// ============================================================
+
+export async function insertDiscoveryLog(db: D1Database, entry: {
+  url: string;
+  airport_code: string | null;
+  discovered_by: string;
+  probe_score: number | null;
+  adapter_detected: string | null;
+  status: string;
+}): Promise<void> {
+  await db
+    .prepare(`
+      INSERT INTO discovery_log (url, airport_code, discovered_by, probe_score, adapter_detected, status)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+    `)
+    .bind(entry.url, entry.airport_code, entry.discovered_by, entry.probe_score, entry.adapter_detected, entry.status)
+    .run();
+}
+
+export async function getDiscoveryLogForUrl(db: D1Database, url: string): Promise<boolean> {
+  const row = await db
+    .prepare("SELECT id FROM discovery_log WHERE url = ?1 LIMIT 1")
+    .bind(url)
+    .first();
+  return row !== null;
+}
+
+// ============================================================
 // REPORTS (crowdsourced)
 // ============================================================
 
