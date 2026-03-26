@@ -394,3 +394,61 @@ export async function getRecentCrowdAverage(
     .all();
   return result.results as any[];
 }
+
+// ============================================================
+// MAP + STATS QUERIES
+// ============================================================
+
+export async function getWorstAirports(db: D1Database, limit: number = 10): Promise<{
+  airport_code: string;
+  name: string;
+  city: string;
+  state: string;
+  worst_wait: number;
+  lane_type: string;
+  data_tier: string;
+}[]> {
+  const result = await db
+    .prepare(`
+      SELECT cw.airport_code, a.name, a.city, a.state,
+             MAX(cw.wait_minutes) as worst_wait, cw.lane_type, a.data_tier
+      FROM current_waits cw
+      JOIN airports a ON cw.airport_code = a.iata
+      WHERE cw.lane_type = 'standard'
+      GROUP BY cw.airport_code
+      ORDER BY worst_wait DESC
+      LIMIT ?1
+    `)
+    .bind(limit)
+    .all();
+  return result.results as any[];
+}
+
+export async function getNationalStats(db: D1Database): Promise<{
+  total_airports: number;
+  airports_with_data: number;
+  avg_wait_standard: number;
+  avg_wait_precheck: number;
+  worst_airport_code: string | null;
+  worst_wait: number;
+  tier_breakdown: { tier: string; count: number }[];
+}> {
+  const [totalRow, withDataRow, avgStdRow, avgPreRow, worstRow, tierRows] = await Promise.all([
+    db.prepare("SELECT COUNT(*) as count FROM airports WHERE status = 'active'").first<{ count: number }>(),
+    db.prepare("SELECT COUNT(DISTINCT airport_code) as count FROM current_waits").first<{ count: number }>(),
+    db.prepare("SELECT AVG(wait_minutes) as avg FROM current_waits WHERE lane_type = 'standard'").first<{ avg: number }>(),
+    db.prepare("SELECT AVG(wait_minutes) as avg FROM current_waits WHERE lane_type = 'precheck'").first<{ avg: number }>(),
+    db.prepare("SELECT airport_code, MAX(wait_minutes) as wait FROM current_waits WHERE lane_type = 'standard'").first<{ airport_code: string; wait: number }>(),
+    db.prepare("SELECT data_tier as tier, COUNT(*) as count FROM airports WHERE status = 'active' GROUP BY data_tier").all<{ tier: string; count: number }>(),
+  ]);
+
+  return {
+    total_airports: totalRow?.count ?? 0,
+    airports_with_data: withDataRow?.count ?? 0,
+    avg_wait_standard: Math.round((avgStdRow?.avg ?? 0) * 10) / 10,
+    avg_wait_precheck: Math.round((avgPreRow?.avg ?? 0) * 10) / 10,
+    worst_airport_code: worstRow?.airport_code ?? null,
+    worst_wait: worstRow?.wait ?? 0,
+    tier_breakdown: tierRows.results,
+  };
+}
