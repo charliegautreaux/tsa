@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "preboard",
+  "account_id": "94971cf14d21604390757710c0a0402f",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -16,7 +17,7 @@
     {
       "binding": "DB",
       "database_name": "preboard-db",
-      "database_id": "PASTE_YOUR_D1_DATABASE_ID_HERE",
+      "database_id": "355fc969-6226-44e3-bb93-647776f5e571",
       "migrations_dir": "migrations"
     }
   ],
@@ -25,7 +26,7 @@
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+      "id": "3c866805a565470eb48ab57fe199df3b"
     }
   ],
 
