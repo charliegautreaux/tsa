@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wait-low: #22c55e;
+  --color-wait-moderate: #eab308;
+  --color-wait-high: #f97316;
+  --color-wait-severe: #ef4444;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
