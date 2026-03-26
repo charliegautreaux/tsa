@@ -1,15 +1,12 @@
-import type { LaneType, Trend } from "./reading";
-
 export interface Prediction {
   airport_code: string;
   checkpoint_id: string;
-  lane_type: LaneType;
-  predicted_wait_minutes: number;
+  lane_type: string;
+  predicted_wait: number;
   confidence: number;
-  trend: Trend;
-  forecast_4h: ForecastPoint[];
-  best_time: BestTimeWindow | null;
+  trend: "rising" | "falling" | "stable";
   data_sources: string[];
+  generated_at: string;
 }
 
 export interface ForecastPoint {
@@ -18,8 +15,31 @@ export interface ForecastPoint {
   confidence: number;
 }
 
-export interface BestTimeWindow {
-  start: string;
-  end: string;
-  predicted_wait: number;
+export interface Forecast {
+  airport_code: string;
+  checkpoint_id: string;
+  lane_type: string;
+  points: ForecastPoint[];
+  best_time: {
+    start: string;
+    end: string;
+    predicted_wait: number;
+  } | null;
+}
+
+export interface HistoricalPattern {
+  airport_code: string;
+  checkpoint_id: string;
+  lane_type: string;
+  day_of_week: number;
+  hour: number;
+  avg_wait: number;
+  sample_count: number;
+}
+
+export interface WeatherImpact {
+  airport_code: string;
+  condition: string;
+  impact_factor: number;
+  fetched_at: string;
 }

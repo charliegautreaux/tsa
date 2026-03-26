@@ -306,3 +306,91 @@ export async function insertReport(
     )
     .run();
 }
+
+// ============================================================
+// PREDICTIONS
+// ============================================================
+
+export async function upsertPrediction(db: D1Database, pred: {
+  airport_code: string;
+  checkpoint_id: string;
+  lane_type: string;
+  forecast_time: string;
+  predicted_wait: number;
+  confidence: number;
+}): Promise<void> {
+  await db
+    .prepare(`
+      INSERT INTO predictions (airport_code, checkpoint_id, lane_type, forecast_time, predicted_wait, confidence)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+      ON CONFLICT(airport_code, checkpoint_id, lane_type, forecast_time) DO UPDATE SET
+        predicted_wait = excluded.predicted_wait,
+        confidence = excluded.confidence,
+        generated_at = datetime('now')
+    `)
+    .bind(pred.airport_code, pred.checkpoint_id, pred.lane_type, pred.forecast_time, pred.predicted_wait, pred.confidence)
+    .run();
+}
+
+export async function getPredictions(db: D1Database, airportCode: string): Promise<{
+  airport_code: string;
+  checkpoint_id: string;
+  lane_type: string;
+  forecast_time: string;
+  predicted_wait: number;
+  confidence: number;
+}[]> {
+  const result = await db
+    .prepare(`
+      SELECT * FROM predictions
+      WHERE airport_code = ?1 AND forecast_time > datetime('now')
+      ORDER BY forecast_time ASC
+    `)
+    .bind(airportCode.toUpperCase())
+    .all();
+  return result.results as any[];
+}
+
+export async function getHistoricalAverages(db: D1Database, airportCode: string): Promise<{
+  checkpoint_id: string;
+  lane_type: string;
+  day_of_week: number;
+  hour: number;
+  avg_wait: number;
+  sample_count: number;
+}[]> {
+  const result = await db
+    .prepare(`
+      SELECT
+        checkpoint_id,
+        lane_type,
+        CAST(strftime('%w', measured_at) AS INTEGER) as day_of_week,
+        CAST(strftime('%H', measured_at) AS INTEGER) as hour,
+        AVG(wait_minutes) as avg_wait,
+        COUNT(*) as sample_count
+      FROM readings
+      WHERE airport_code = ?1 AND source_type != 'predicted'
+      GROUP BY checkpoint_id, lane_type, day_of_week, hour
+    `)
+    .bind(airportCode.toUpperCase())
+    .all();
+  return result.results as any[];
+}
+
+export async function getRecentCrowdAverage(
+  db: D1Database,
+  airportCode: string,
+  minutesBack: number = 30
+): Promise<{ checkpoint: string; lane_type: string; avg_wait: number }[]> {
+  const since = new Date(Date.now() - minutesBack * 60_000).toISOString();
+  const result = await db
+    .prepare(`
+      SELECT checkpoint, lane_type, AVG(wait_minutes) as avg_wait
+      FROM reports
+      WHERE airport_code = ?1 AND created_at > ?2
+      GROUP BY checkpoint, lane_type
+    `)
+    .bind(airportCode.toUpperCase(), since)
+    .all();
+  return result.results as any[];
+}
