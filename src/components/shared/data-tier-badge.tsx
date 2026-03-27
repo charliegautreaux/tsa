@@ -1,12 +1,15 @@
-import type { DataTier } from "@/lib/types/airport";
-
-const tierConfig: Record<DataTier, { label: string; className: string; pulse: boolean }> = {
+const tierConfig: Record<string, { label: string; className: string; pulse: boolean }> = {
   live: {
     label: "LIVE",
     className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
     pulse: true,
   },
   "near-live": {
+    label: "~1 min",
+    className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    pulse: false,
+  },
+  near_live: {
     label: "~1 min",
     className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
     pulse: false,
@@ -23,8 +26,10 @@ const tierConfig: Record<DataTier, { label: string; className: string; pulse: bo
   },
 };
 
-export function DataTierBadge({ tier }: { tier: DataTier }) {
-  const config = tierConfig[tier];
+const fallback = { label: "Unknown", className: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400", pulse: false };
+
+export function DataTierBadge({ tier }: { tier: string }) {
+  const config = tierConfig[tier] ?? fallback;
 
   return (
     <span

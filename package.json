@@ -5,12 +5,13 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "preview": "opennextjs-cloudflare build && wrangler dev",
-    "deploy": "opennextjs-cloudflare build && wrangler deploy",
+    "preview": "opennextjs-cloudflare build && node scripts/inject-cron.mjs && wrangler dev",
+    "deploy": "opennextjs-cloudflare build && node scripts/inject-cron.mjs && wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply preboard-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply preboard-db --remote",
     "db:seed:local": "npx tsx scripts/seed-airports.ts --local",
     "db:seed:remote": "npx tsx scripts/seed-airports.ts --remote",
+    "db:seed:dev": "npx tsx scripts/seed-dev-data.ts",
     "lint": "next lint",
     "test": "vitest",
     "test:run": "vitest run"
@@ -27,7 +28,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260317.1",
-    "@opennextjs/cloudflare": "^1.17.3",
+    "@opennextjs/cloudflare": "^1.18.0",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",

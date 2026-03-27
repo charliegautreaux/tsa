@@ -14,6 +14,7 @@ import "@/lib/adapters/faa-swim";
 import "@/lib/adapters/flightaware";
 import "@/lib/adapters/noaa";
 import "@/lib/adapters/tsa-throughput";
+import "@/lib/adapters/traytable";
 
 interface PollResult {
   feeds_polled: number;

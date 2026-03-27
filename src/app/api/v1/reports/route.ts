@@ -3,7 +3,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { insertReport } from "@/lib/db/d1";
 import { validateReport } from "@/lib/utils/validation";
 
-export const runtime = "edge";
 
 export async function POST(request: Request) {
   const { env } = await getCloudflareContext();

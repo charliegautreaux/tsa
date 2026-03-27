@@ -25,7 +25,8 @@ export type AdapterType =
   | "flightaware"
   | "noaa"
   | "tsa-throughput"
-  | "crowdsource";
+  | "crowdsource"
+  | "traytable";
 
 export type DiscoveryMethod =
   | "known-pattern"

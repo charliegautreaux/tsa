@@ -42,7 +42,7 @@ export async function cacheAirportLive(
   airportCode: string,
   data: unknown
 ): Promise<void> {
-  await kv.put(`${AIRPORT_LIVE_KEY}${airportCode}`, JSON.stringify(data), { expirationTtl: 30 });
+  await kv.put(`${AIRPORT_LIVE_KEY}${airportCode}`, JSON.stringify(data), { expirationTtl: 60 });
 }
 
 export async function getCachedAirportLive(

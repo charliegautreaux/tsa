@@ -3,7 +3,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getAirport, getCheckpoints, getCurrentWaits } from "@/lib/db/d1";
 import { getCachedAirportLive, cacheAirportLive } from "@/lib/db/kv";
 
-export const runtime = "edge";
 
 export async function GET(
   _request: Request,
@@ -31,6 +30,7 @@ export async function GET(
   ]);
 
   // Group waits by checkpoint
+  const knownCpIds = new Set(checkpoints.map((cp) => cp.id));
   const checkpointData = checkpoints.map((cp) => {
     const waits = currentWaits.filter((w) => w.checkpoint_id === cp.id);
     const lanes: Record<string, unknown> = {};
@@ -51,6 +51,32 @@ export async function GET(
       updated_at: waits[0]?.updated_at ?? null,
     };
   });
+
+  // Include dynamically-discovered checkpoints (e.g., from traytable feeds)
+  const dynamicCpIds = [...new Set(
+    currentWaits.filter((w) => !knownCpIds.has(w.checkpoint_id)).map((w) => w.checkpoint_id)
+  )];
+  for (const cpId of dynamicCpIds) {
+    const waits = currentWaits.filter((w) => w.checkpoint_id === cpId);
+    const lanes: Record<string, unknown> = {};
+    for (const w of waits) {
+      lanes[w.lane_type] = {
+        wait_minutes: w.wait_minutes,
+        trend: w.trend,
+        confidence: w.confidence,
+        source: w.source_type,
+      };
+    }
+    const namePart = cpId.replace(/^[a-z]{3}-/, "");
+    checkpointData.push({
+      id: cpId,
+      name: namePart.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+      terminal: null,
+      status: "open",
+      lanes,
+      updated_at: waits[0]?.updated_at ?? null,
+    });
+  }
 
   const response = {
     airport: {

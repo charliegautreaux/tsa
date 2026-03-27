@@ -11,7 +11,7 @@ export const crowdsourceAdapter: FeedAdapter = {
 
   async fetch(config: FeedConfig, env: Record<string, unknown>): Promise<RawReading[]> {
     const db = env.DB as D1Database;
-    const since = new Date(Date.now() - 30 * 60_000).toISOString();
+    const since = new Date(Date.now() - 30 * 60_000).toISOString().replace("T", " ").slice(0, 19);
 
     const result = await db
       .prepare(
@@ -45,7 +45,7 @@ export const crowdsourceAdapter: FeedAdapter = {
     const db = env.DB as D1Database;
     const start = performance.now();
     try {
-      const since = new Date(Date.now() - 3600_000).toISOString();
+      const since = new Date(Date.now() - 3600_000).toISOString().replace("T", " ").slice(0, 19);
       await db
         .prepare("SELECT COUNT(*) as count FROM reports WHERE airport_code = ?1 AND created_at > ?2")
         .bind(config.airport_code, since)

@@ -6,16 +6,21 @@ import type { HistoricalPattern } from "@/lib/types/prediction";
 
 const LANE_TYPES = ["standard", "precheck", "clear"] as const;
 
-export async function runPredictions(db: D1Database): Promise<{
+export async function runPredictions(db: D1Database, maxAirports = 5): Promise<{
   airports_processed: number;
   predictions_generated: number;
 }> {
   const result = { airports_processed: 0, predictions_generated: 0 };
-  const airports = await getAllAirports(db);
+  const allAirports = await getAllAirports(db);
   const now = new Date();
 
+  // Process a rotating subset to stay within D1 subrequest limits
+  const offset = now.getMinutes() % Math.ceil(allAirports.length / maxAirports);
+  const airports = allAirports
+    .filter((a) => a.data_tier !== "live")
+    .slice(offset * maxAirports, offset * maxAirports + maxAirports);
+
   for (const airport of airports) {
-    if (airport.data_tier === "live") continue;
 
     result.airports_processed++;
 

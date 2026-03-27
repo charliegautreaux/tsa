@@ -2,39 +2,43 @@ import type { FeedAdapter, RawReading } from "./base";
 import type { FeedConfig, FeedHealth } from "@/lib/types/feed";
 import { registerAdapter } from "./registry";
 
-const FAA_STATUS_BASE = "https://soa.smext.faa.gov/asws/api/airport/status";
+/**
+ * Live FAA NAS Status API — returns delay data for all US airports.
+ * Free, public, no auth required. Updated every few minutes.
+ */
+const NAS_STATUS_URL = "https://nasstatus.faa.gov/api/airport-status-information";
+
+/** Extract all ARPT codes from a delay section using regex. */
+function extractDelayedAirports(xml: string): Set<string> {
+  const codes = new Set<string>();
+  const matches = xml.matchAll(/<ARPT>([A-Z]{3})<\/ARPT>/g);
+  for (const m of matches) {
+    codes.add(m[1]);
+  }
+  return codes;
+}
 
 export const faaSWIMAdapter: FeedAdapter = {
   id: "faa-swim",
 
   async fetch(config: FeedConfig, _env: Record<string, unknown>): Promise<RawReading[]> {
-    const url =
-      config.url ?? `${FAA_STATUS_BASE}/${config.airport_code}`;
-
-    let json: unknown;
+    let xml: string;
     try {
-      const response = await fetch(url, {
-        headers: { "Accept": "application/json" },
+      const response = await fetch(NAS_STATUS_URL, {
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) return [];
-      json = await response.json();
+      xml = await response.text();
     } catch {
       return [];
     }
 
-    if (!json || typeof json !== "object") return [];
-    const data = json as Record<string, unknown>;
+    const delayedAirports = extractDelayedAirports(xml);
 
-    // Check for delay status — any truthy delay indicator triggers a synthetic reading
-    const hasDelay =
-      data.status === "Delay" ||
-      (data.delay === true) ||
-      (typeof data.delay === "string" && data.delay.toLowerCase() !== "false" && data.delay.toLowerCase() !== "no");
+    if (!delayedAirports.has(config.airport_code)) return [];
 
-    if (!hasDelay) return [];
-
-    // Return a synthetic predicted reading signaling disruption
+    // Return a synthetic disruption reading — signals the prediction engine
+    // to apply its disruption multiplier for this airport
     return [
       {
         airport_code: config.airport_code,
@@ -43,20 +47,16 @@ export const faaSWIMAdapter: FeedAdapter = {
         wait_minutes: 0,
         confidence: 0.5,
         source_type: "predicted",
-        measured_at: new Date().toISOString(),
+        measured_at: new Date().toISOString().replace("T", " ").slice(0, 19),
       },
     ];
   },
 
   async healthCheck(config: FeedConfig, _env: Record<string, unknown>): Promise<FeedHealth> {
-    const url =
-      config.url ?? `${FAA_STATUS_BASE}/${config.airport_code}`;
-
     const start = Date.now();
     try {
-      const response = await fetch(url, {
+      const response = await fetch(NAS_STATUS_URL, {
         method: "HEAD",
-        headers: { "Accept": "application/json" },
         signal: AbortSignal.timeout(5_000),
       });
       return {

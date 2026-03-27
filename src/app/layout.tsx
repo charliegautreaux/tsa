@@ -23,12 +23,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-white text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <TopNav />
-          <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
-            <div className="flex-1">{children}</div>
-            <Footer />
+      <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <div className="mesh-bg">
+            <TopNav />
+            <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
+              <div className="flex-1">{children}</div>
+              <Footer />
+            </div>
           </div>
         </ThemeProvider>
       </body>

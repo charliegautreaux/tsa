@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getAirportOverview } from "@/lib/db/d1";
 
-export const runtime = "edge";
 
 export async function GET() {
   try {
@@ -25,13 +24,13 @@ export async function GET() {
 
     // Cache for 30 seconds
     await env.CACHE.put("map:overview", JSON.stringify(response), {
-      expirationTtl: 30,
+      expirationTtl: 60,
     });
 
     return NextResponse.json(response, {
       headers: { "X-Cache": "MISS" },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({
       count: 0,
       airports: [],
