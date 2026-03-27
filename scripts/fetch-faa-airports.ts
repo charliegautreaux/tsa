@@ -41,8 +41,11 @@ interface TzBox {
 const SEED_PATH = path.join(__dirname, "../src/data/airports-seed.json");
 const TZ_PATH = path.join(__dirname, "../src/data/tz-lookup.json");
 
+// FAA NPIAS enplanement data URL — update annually when new CY data is published.
+// If this URL returns 404, the script falls back to existing seed data.
+// Manual refresh: run `npx tsx scripts/generate-seed-data.ts` to regenerate from embedded data.
 const FAA_URL =
-  "https://adip.faa.gov/agis/public/download/NPIAS-CY2023-Enplanements.csv";
+  "https://www.faa.gov/airports/planning_capacity/npias/current/media/NPIAS-Enplanements.csv";
 
 const VALID_STATES = new Set([
   "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
