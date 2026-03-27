@@ -48,10 +48,7 @@ jobs:
         run: node scripts/inject-cron.mjs
 
       - name: Deploy to Cloudflare
-        run: |
-          mv open-next.config.ts open-next.config.ts.bak
-          npx wrangler deploy
-          mv open-next.config.ts.bak open-next.config.ts
+        run: npx opennextjs-cloudflare deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
