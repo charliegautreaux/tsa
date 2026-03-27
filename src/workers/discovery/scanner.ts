@@ -93,6 +93,15 @@ function generateProbeUrls(airport: Airport): string[] {
   return urls;
 }
 
+/** Size priority for scanning order (lower = scanned first) */
+const SIZE_PRIORITY: Record<string, number> = {
+  large_hub: 0,
+  medium_hub: 1,
+  small_hub: 2,
+  nonhub: 3,
+  unknown: 4,
+};
+
 /** Run a full discovery scan across airports */
 export async function runDiscoveryScan(db: D1Database): Promise<{
   airports_scanned: number;
@@ -102,7 +111,15 @@ export async function runDiscoveryScan(db: D1Database): Promise<{
   const result = { airports_scanned: 0, urls_probed: 0, feeds_discovered: 0 };
   const airports = await getAllAirports(db);
 
-  const toScan = airports.slice(0, DISCOVERY_THRESHOLDS.MAX_AIRPORTS_PER_RUN);
+  // Priority scan: large hubs first
+  const sorted = [...airports].sort(
+    (a, b) => (SIZE_PRIORITY[a.size] ?? 4) - (SIZE_PRIORITY[b.size] ?? 4)
+  );
+
+  const toScan = sorted.slice(0, DISCOVERY_THRESHOLDS.MAX_AIRPORTS_PER_RUN);
+
+  // Track active probes per domain for rate limiting
+  const domainProbes = new Map<string, number>();
 
   for (const airport of toScan) {
     result.airports_scanned++;
@@ -112,8 +129,18 @@ export async function runDiscoveryScan(db: D1Database): Promise<{
       const alreadyProbed = await getDiscoveryLogForUrl(db, url);
       if (alreadyProbed) continue;
 
+      // Per-domain rate limit
+      const domain = new URL(url).hostname;
+      const active = domainProbes.get(domain) ?? 0;
+      const maxPerDomain = DISCOVERY_THRESHOLDS.MAX_CONCURRENT_PER_DOMAIN ?? 2;
+      if (active >= maxPerDomain) continue;
+      domainProbes.set(domain, active + 1);
+
       result.urls_probed++;
       const probe = await probeUrl(url, airport.iata);
+
+      // Release domain slot
+      domainProbes.set(domain, (domainProbes.get(domain) ?? 1) - 1);
 
       await insertDiscoveryLog(db, {
         url,

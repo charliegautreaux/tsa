@@ -22,6 +22,11 @@ export const PROBE_URL_PATTERNS = [
   "/checkpoint/status",
   "/api/queue/times",
   "/real-time/security",
+  "/api/security-lines",
+  "/passenger-info/wait-times",
+  "/tsa-info",
+  "/api/v2/security",
+  "/flight-info/security",
 ];
 
 /** Common airport domain patterns */
@@ -32,6 +37,11 @@ export const AIRPORT_DOMAIN_PATTERNS = [
   "www.fly{code}.com",
   "{city}airport.com",
   "{code}-airport.com",
+  "{code}.airport-authority.com",
+  "www.{city}airport.org",
+  "airport.{city}.gov",
+  "{code}intl.com",
+  "www.{code}airport.com",
 ];
 
 /** Sitemap keywords that suggest wait time content */
@@ -48,9 +58,11 @@ export const DISCOVERY_THRESHOLDS = {
   /** Number of trial polls before evaluation */
   TRIAL_POLL_COUNT: 288, // 24h at 5min intervals
   /** Max number of airports to scan per discovery run */
-  MAX_AIRPORTS_PER_RUN: 50,
+  MAX_AIRPORTS_PER_RUN: 100,
   /** Max concurrent probes per run */
   MAX_CONCURRENT_PROBES: 5,
+  /** Max concurrent probes per domain */
+  MAX_CONCURRENT_PER_DOMAIN: 2,
 };
 
 /** Wait time scoring heuristics for probe responses */
