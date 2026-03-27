@@ -6,6 +6,7 @@ import { CheckpointRow } from "@/components/airport/checkpoint-row";
 import { DataTierBadge } from "@/components/shared/data-tier-badge";
 import { Sparkline } from "@/components/shared/sparkline";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { PreCheckCTA } from "@/components/affiliate/precheck-cta";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   getAirport,
@@ -221,6 +222,17 @@ export default async function AirportDetailPage({
           ))}
         </div>
       )}
+
+      {/* Affiliate CTA */}
+      <div className="mt-8">
+        <PreCheckCTA
+          waitMinutes={
+            currentWaits.length > 0
+              ? Math.max(...currentWaits.filter(w => w.lane_type === 'standard').map(w => w.wait_minutes))
+              : undefined
+          }
+        />
+      </div>
     </main>
   );
 }
