@@ -44,7 +44,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
         <OrganizationJsonLd />
         <GAProvider />
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <ThemeProvider attribute="class" forcedTheme="dark">
           <WebVitals />
           <div className="mesh-bg">
             <TopNav />
