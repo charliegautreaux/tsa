@@ -5,14 +5,27 @@ import { Footer } from "@/components/layout/footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PreBoard.ai — Live TSA Wait Times",
+  title: "PreBoard — Live TSA Wait Times",
   description:
-    "Real-time TSA security line wait times for every US airport. Check PreBoard before you board.",
+    "Real-time TSA security line wait times for every US airport. Did you PreBoard?",
   openGraph: {
-    title: "PreBoard.ai — Live TSA Wait Times",
+    title: "PreBoard — Live TSA Wait Times",
     description:
-      "Real-time TSA security line wait times for every US airport.",
+      "Real-time TSA security line wait times for every US airport. Did you PreBoard?",
     type: "website",
+    siteName: "PreBoard",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: "/favicon.ico",
+  },
+  manifest: "/manifest.json",
+  other: {
+    "theme-color": "#7C3AED",
   },
 };
 
