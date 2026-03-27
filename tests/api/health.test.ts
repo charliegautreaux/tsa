@@ -22,17 +22,19 @@ import { GET } from "@/app/api/v1/health/route";
 describe("GET /api/v1/health", () => {
   it("returns ok status", async () => {
     const response = await GET();
-    const body = await response.json();
+    const body = (await response.json()) as Record<string, unknown>;
+    const services = body.services as Record<string, unknown>;
+    const feeds = body.feeds as Record<string, unknown>;
 
     expect(response.status).toBe(200);
     expect(body.status).toBe("ok");
     expect(body.version).toBe("0.2.0");
     expect(body.timestamp).toBeDefined();
-    expect(body.services.api).toBe("ok");
-    expect(body.services.database).toBe("ok");
-    expect(body.services.feeds).toBe("ok");
-    expect(body.feeds.active).toBe(3);
-    expect(body.feeds.trial).toBe(1);
+    expect(services.api).toBe("ok");
+    expect(services.database).toBe("ok");
+    expect(services.feeds).toBe("ok");
+    expect(feeds.active).toBe(3);
+    expect(feeds.trial).toBe(1);
   });
 
   it("returns degraded status when DB errors", async () => {
@@ -48,10 +50,11 @@ describe("GET /api/v1/health", () => {
     } as unknown as Awaited<ReturnType<typeof getCloudflareContext>>);
 
     const response = await GET();
-    const body = await response.json();
+    const body = (await response.json()) as Record<string, unknown>;
+    const services = body.services as Record<string, unknown>;
 
     expect(response.status).toBe(503);
     expect(body.status).toBe("degraded");
-    expect(body.services.database).toBe("error");
+    expect(services.database).toBe("error");
   });
 });
