@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { WebPageJsonLd } from '@/components/seo/json-ld';
 import { ArrowLeft } from "lucide-react";
 import { CheckpointRow } from "@/components/airport/checkpoint-row";
 import { DataTierBadge } from "@/components/shared/data-tier-badge";
@@ -149,6 +150,11 @@ export default async function AirportDetailPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6">
+      <WebPageJsonLd
+        title={`TSA Wait Times at ${airport.name} (${code})`}
+        description={`Live TSA security wait times at ${airport.name}.`}
+        url={`https://preboard.cgautreauxnc.workers.dev/airports/${code}`}
+      />
       <Link
         href="/"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-900 dark:hover:text-gray-100"

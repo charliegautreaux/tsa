@@ -5,6 +5,7 @@ import { WebVitals } from "@/components/analytics/web-vitals";
 import { TopNav } from "@/components/layout/top-nav";
 import { Footer } from "@/components/layout/footer";
 import { CookieBanner } from "@/components/consent/cookie-banner";
+import { OrganizationJsonLd } from "@/components/seo/json-ld";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
+        <OrganizationJsonLd />
         <GAProvider />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <WebVitals />
