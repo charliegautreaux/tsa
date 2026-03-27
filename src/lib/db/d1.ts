@@ -129,7 +129,7 @@ export async function getRecentReadings(
   airportCode: string,
   hoursBack: number = 24
 ): Promise<NormalizedReading[]> {
-  const since = new Date(Date.now() - hoursBack * 3600_000).toISOString();
+  const since = new Date(Date.now() - hoursBack * 3600_000).toISOString().replace("T", " ").slice(0, 19);
   const result = await db
     .prepare(`
       SELECT * FROM readings
@@ -382,13 +382,126 @@ export async function getRecentCrowdAverage(
   airportCode: string,
   minutesBack: number = 30
 ): Promise<{ checkpoint: string; lane_type: string; avg_wait: number }[]> {
-  const since = new Date(Date.now() - minutesBack * 60_000).toISOString();
+  const since = new Date(Date.now() - minutesBack * 60_000).toISOString().replace("T", " ").slice(0, 19);
   const result = await db
     .prepare(`
       SELECT checkpoint, lane_type, AVG(wait_minutes) as avg_wait
       FROM reports
       WHERE airport_code = ?1 AND created_at > ?2
       GROUP BY checkpoint, lane_type
+    `)
+    .bind(airportCode.toUpperCase(), since)
+    .all();
+  return result.results as any[];
+}
+
+// ============================================================
+// SPARKLINE DATA (for trend charts)
+// ============================================================
+
+export async function getSparklineData(db: D1Database, hoursBack: number = 6): Promise<{
+  airport_code: string;
+  wait_minutes: number;
+  bucket: string;
+}[]> {
+  const since = new Date(Date.now() - hoursBack * 3600_000)
+    .toISOString().replace("T", " ").slice(0, 19);
+  const result = await db
+    .prepare(`
+      SELECT
+        airport_code,
+        ROUND(MAX(wait_minutes), 1) as wait_minutes,
+        substr(measured_at, 1, 14) || CASE
+          WHEN CAST(substr(measured_at, 15, 2) AS INTEGER) < 30 THEN '00'
+          ELSE '30'
+        END as bucket
+      FROM readings
+      WHERE measured_at > ?1 AND source_type != 'predicted' AND lane_type = 'standard'
+      GROUP BY airport_code,
+        substr(measured_at, 1, 14) || CASE
+          WHEN CAST(substr(measured_at, 15, 2) AS INTEGER) < 30 THEN '00'
+          ELSE '30'
+        END
+      ORDER BY airport_code, bucket
+    `)
+    .bind(since)
+    .all();
+  return result.results as any[];
+}
+
+// ============================================================
+// ROLLUP QUERIES (long-term historical data)
+// ============================================================
+
+export async function getRollupData(
+  db: D1Database,
+  airportCode: string,
+  daysBack: number = 30,
+  checkpointId?: string
+): Promise<{
+  airport_code: string;
+  checkpoint_id: string;
+  lane_type: string;
+  hour: string;
+  avg_wait: number;
+  min_wait: number;
+  max_wait: number;
+  sample_count: number;
+}[]> {
+  const since = new Date(Date.now() - daysBack * 24 * 3600_000)
+    .toISOString().replace("T", " ").slice(0, 19);
+
+  if (checkpointId) {
+    const result = await db
+      .prepare(`
+        SELECT airport_code, checkpoint_id, lane_type, hour, avg_wait, min_wait, max_wait, sample_count
+        FROM readings_rollup
+        WHERE airport_code = ?1 AND checkpoint_id = ?2 AND hour > ?3
+        ORDER BY hour ASC
+      `)
+      .bind(airportCode.toUpperCase(), checkpointId, since)
+      .all();
+    return result.results as any[];
+  }
+
+  const result = await db
+    .prepare(`
+      SELECT airport_code, checkpoint_id, lane_type, hour, avg_wait, min_wait, max_wait, sample_count
+      FROM readings_rollup
+      WHERE airport_code = ?1 AND hour > ?2
+      ORDER BY hour ASC
+    `)
+    .bind(airportCode.toUpperCase(), since)
+    .all();
+  return result.results as any[];
+}
+
+export async function getAirportRollupSummary(
+  db: D1Database,
+  airportCode: string,
+  daysBack: number = 30
+): Promise<{
+  lane_type: string;
+  avg_wait: number;
+  min_wait: number;
+  max_wait: number;
+  total_samples: number;
+  hours_with_data: number;
+}[]> {
+  const since = new Date(Date.now() - daysBack * 24 * 3600_000)
+    .toISOString().replace("T", " ").slice(0, 19);
+  const result = await db
+    .prepare(`
+      SELECT
+        lane_type,
+        ROUND(AVG(avg_wait), 1) as avg_wait,
+        ROUND(MIN(min_wait), 1) as min_wait,
+        ROUND(MAX(max_wait), 1) as max_wait,
+        SUM(sample_count) as total_samples,
+        COUNT(*) as hours_with_data
+      FROM readings_rollup
+      WHERE airport_code = ?1 AND hour > ?2
+      GROUP BY lane_type
     `)
     .bind(airportCode.toUpperCase(), since)
     .all();

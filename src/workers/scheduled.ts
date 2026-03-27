@@ -46,8 +46,32 @@ async function hourlyMaintenance(db: D1Database): Promise<void> {
     .prepare("UPDATE feeds SET error_count_1h = 0, success_count_1h = 0 WHERE status IN ('active', 'trial', 'degraded')")
     .run();
 
-  const cutoff = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
-  await db.prepare("DELETE FROM readings WHERE ingested_at < ?1").bind(cutoff).run();
+  // Roll up readings older than 6 hours into hourly aggregates BEFORE deleting
+  const rollupCutoff = new Date(Date.now() - 6 * 3600_000).toISOString().replace("T", " ").slice(0, 19);
+  const deleteCutoff = new Date(Date.now() - 7 * 24 * 3600_000).toISOString().replace("T", " ").slice(0, 19);
+
+  await db
+    .prepare(`
+      INSERT OR REPLACE INTO readings_rollup (airport_code, checkpoint_id, lane_type, hour, avg_wait, min_wait, max_wait, sample_count, source_types)
+      SELECT
+        airport_code,
+        checkpoint_id,
+        lane_type,
+        substr(measured_at, 1, 13) || ':00' as hour,
+        ROUND(AVG(wait_minutes), 1) as avg_wait,
+        ROUND(MIN(wait_minutes), 1) as min_wait,
+        ROUND(MAX(wait_minutes), 1) as max_wait,
+        COUNT(*) as sample_count,
+        GROUP_CONCAT(DISTINCT source_type) as source_types
+      FROM readings
+      WHERE measured_at < ?1 AND source_type != 'predicted'
+      GROUP BY airport_code, checkpoint_id, lane_type, substr(measured_at, 1, 13)
+    `)
+    .bind(rollupCutoff)
+    .run();
+
+  // Now safe to delete old raw readings
+  await db.prepare("DELETE FROM readings WHERE ingested_at < ?1").bind(deleteCutoff).run();
 
   const predCutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
   await db.prepare("DELETE FROM predictions WHERE generated_at < ?1").bind(predCutoff).run();
