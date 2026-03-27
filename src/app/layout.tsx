@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { ThemeProvider } from "next-themes";
 import { GAProvider } from "@/components/analytics/ga-provider";
 import { WebVitals } from "@/components/analytics/web-vitals";
@@ -41,15 +40,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6421284949564984"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
         <OrganizationJsonLd />
         <GAProvider />
-        <Script
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6421284949564984"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
         <ThemeProvider attribute="class" forcedTheme="dark">
           <WebVitals />
           <div className="mesh-bg">
