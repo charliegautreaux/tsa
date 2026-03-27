@@ -43,6 +43,7 @@
   // Environment variables
   "vars": {
     "ENVIRONMENT": "production",
-    "NEXT_PUBLIC_SITE_URL": "https://preboard.cgautreauxnc.workers.dev"
+    "NEXT_PUBLIC_SITE_URL": "https://preboard.cgautreauxnc.workers.dev",
+    "NEXT_PUBLIC_GA_MEASUREMENT_ID": ""
   }
 }

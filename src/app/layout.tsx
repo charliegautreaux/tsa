@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
+import { GAProvider } from "@/components/analytics/ga-provider";
 import { TopNav } from "@/components/layout/top-nav";
 import { Footer } from "@/components/layout/footer";
 import "./globals.css";
@@ -37,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
+        <GAProvider />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <div className="mesh-bg">
             <TopNav />
