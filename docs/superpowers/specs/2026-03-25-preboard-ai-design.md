@@ -4,7 +4,9 @@
 **Domain**: preboard.ai
 **Tagline**: "Check PreBoard before you board."
 **Date**: 2026-03-25
-**Status**: Approved for implementation
+**Status**: Implemented and deployed
+**Deployed at**: https://preboard.cgautreauxnc.workers.dev
+**Repo**: https://github.com/charliegautreaux/tsa
 
 ---
 
@@ -29,15 +31,15 @@ PreBoard.ai is a real-time, map-first web application that shows TSA security wa
 
 | Layer | Technology | Cloudflare Service | Cost |
 |-------|-----------|-------------------|------|
-| Frontend | Next.js 15 (App Router), React 19, Tailwind 4, shadcn/ui | **Pages** (free: unlimited requests + bandwidth) | $0 |
-| API | REST + WebSocket endpoints | **Workers** (free: 100K req/day) | $0-5/mo |
-| Realtime | WebSocket pub/sub per airport | **Durable Objects** (free tier) | $0-5/mo |
-| Database | SQLite (all data: readings, airports, feeds, reports, users) | **D1** (free: 5GB, 5M reads/day, 100K writes/day) | $0 |
-| Cache | Current wait snapshot, hot data | **KV** (free: 100K reads/day) | $0 |
-| Static Assets | Map tiles, seed data | **R2** (free: 10GB, 1M reads/mo) | $0 |
-| Cron Jobs | Feed polling, predictions, discovery | **Workers Scheduled** (free) | $0 |
-| Map | MapLibre GL JS + Protomaps tiles on R2 | **R2** (self-hosted tiles) | $0 |
-| **Total** | **One account. One deploy. One bill.** | | **$0/mo (+ ~$7/mo domain)** |
+| Frontend | Next.js 15 (App Router), React 19, Tailwind 4 | **Workers** (via opennextjs-cloudflare) | $0-5/mo |
+| API | REST route handlers (`/api/v1/*`) | **Workers** | (included) |
+| Database | SQLite (9 tables: readings, airports, feeds, etc.) | **D1** (free: 5GB, 5M reads/day, 100K writes/day) | $0 |
+| Cache | Current wait snapshot, map overview data | **KV** (free: 100K reads/day) | $0 |
+| Cron Jobs | Feed polling, predictions, rollup, discovery | **Workers Scheduled** (free) | $0 |
+| Build/Deploy | opennextjs-cloudflare + inject-cron.mjs | **GitHub Actions** | $0 |
+| **Total** | **One account. One deploy. One bill.** | | **$0/mo (+ domain)** |
+
+> **Implementation note (2026-03-26):** The stack runs on Cloudflare Workers via opennextjs-cloudflare, not Cloudflare Pages. Durable Objects are defined in source (`src/workers/durable-objects/airport-hub.ts`) but are **not currently deployed** -- the DO binding was removed from `wrangler.jsonc` to resolve CI build issues. R2 is not yet configured. WebSocket real-time push is not active. The map view (MapLibre GL + Protomaps) is not implemented; the homepage uses a server-rendered airport card grid instead.
 
 ### 2.2 System Diagram
 
@@ -93,6 +95,8 @@ Crowdsourced Reports ─────┤   │  │  - user preferences          
                            │   │  └──────────────────────────────┘   │
                            │   └──────────────────────────────────────┘
 ```
+
+> **Implementation note (2026-03-26):** The system diagram above reflects the original design. In the current deployment: Durable Objects are not active (no WebSocket push), Cloudflare Pages is replaced by Workers via opennextjs-cloudflare, and R2 is not configured. The map view is replaced by a server-rendered airport card grid.
 
 ### 2.3 Data Freshness Tiers
 
@@ -152,7 +156,7 @@ For feeds that don't match a coded adapter but return valid JSON:
 }
 ```
 
-No code deploy needed. Stored in Turso. Worker reads mapping at poll time.
+No code deploy needed. Stored in D1 (`feeds.dynamic_mapping` column). Worker reads mapping at poll time.
 
 ### 3.5 Coded Adapters
 
@@ -168,6 +172,7 @@ src/lib/adapters/
 ├── flightaware.ts       ← FlightAware AeroAPI
 ├── noaa.ts              ← NOAA METAR/TAF weather
 ├── tsa-throughput.ts    ← TSA daily passenger data
+├── traytable.ts         ← TrayTable wait-time data
 └── crowdsource.ts       ← User-submitted reports
 ```
 
@@ -313,7 +318,7 @@ interface Prediction {
 
 ### 5.1 REST API
 
-Base URL: `https://preboard.ai/api/v1`
+Base URL: `https://preboard.cgautreauxnc.workers.dev/api/v1`
 
 | Method | Endpoint | Description | Cache |
 |--------|----------|-------------|-------|
@@ -321,16 +326,18 @@ Base URL: `https://preboard.ai/api/v1`
 | GET | `/airports/:code` | Single airport detail | 30s |
 | GET | `/airports/:code/live` | Real-time snapshot (all checkpoints, all lanes) | 10s |
 | GET | `/airports/:code/predict` | Prediction for next 4 hours | 60s |
-| GET | `/airports/:code/history` | Last 24h of readings | 60s |
+| GET | `/airports/:code/history` | Dual-mode: `?hours=N` for raw, `?days=N` for rollup | 60s / 300s |
 | GET | `/airports/:code/checkpoints` | Checkpoint definitions + current status | 30s |
-| GET | `/map/overview` | All airports with current wait + tier (misery map data) | 30s |
+| GET | `/map/overview` | All airports with current wait + tier | 30s |
 | GET | `/map/worst` | Top 10 worst airports right now | 30s |
 | GET | `/stats/national` | National summary stats | 60s |
 | POST | `/reports` | Submit crowdsourced wait time report | - |
+| GET | `/cron` | Internal cron trigger (auth-gated via `CRON_SECRET`) | - |
 | GET | `/health` | System health + feed status summary | 10s |
-| WS | `/ws/live` | WebSocket stream (subscribe to airport codes) | - |
 
-### 5.2 WebSocket Protocol
+> **Not implemented:** The WebSocket endpoint (`/ws/live`) from the original design requires Durable Objects, which are not currently deployed.
+
+### 5.2 WebSocket Protocol (Not Yet Implemented)
 
 ```
 Client → Server:
@@ -611,64 +618,85 @@ CREATE TABLE report_rate_limits (
 
 ## 7. UI Design
 
-### 7.1 Views
+### 7.1 Views (Implemented)
 
-**Home / Misery Map** (`/`)
-- Full-viewport interactive MapLibre GL map of the US
-- Airport dots: color-coded (green/yellow/orange/red by wait time), sized by traffic volume, pulsing animation for live-data airports
-- Bottom bar: scrolling "WORST RIGHT NOW" with top worst airports
-- National stats bar: airports reporting delays, average wait, vs typical
-- Hover airport dot → tooltip with name + current wait
-- Click airport dot → navigate to detail view
+**Home / Airport Grid** (`/`)
+- Server-rendered grid of airport cards with national stats summary
+- Four stat cards: airports monitored, average wait, live feeds, alerts
+- Airport cards: glass morphism design with severity-colored glow borders
+- Each card shows IATA code, airport name, current wait, data tier badge, sparkline trend
+- Search and sort functionality on the grid
+- Stagger entrance animation on page load
 
-**Airport Detail** (`/airport/[code]`)
-- Header: airport name, code, data tier badge, save/share buttons
-- Checkpoint cards: one per checkpoint, showing all lanes (standard/precheck/clear) with colored bars, wait minutes, trend arrows
-- "When should I arrive?" calculator: enter flight number or departure time, get recommended arrival time and best checkpoint
-- Prediction chart: next 4 hours, area chart with standard/precheck/clear lines, highlighted best-time window
-- 24h history: sparkline chart
-- Recent crowd reports: latest user-submitted reports with timestamps
-- Flight status: departures summary, on-time %, delays, cancellations, weather
-- Tips: auto-generated from historical data (e.g., "South checkpoint is typically 40% faster")
+**Airport Detail** (`/airports/[code]`)
+- Airport header with data tier badge
+- Checkpoint rows showing wait times per lane type
+- Historical data visualization
 
-**Report** (`/report`)
-- GPS auto-detects airport (with manual override)
-- Checkpoint picker (auto-populated from airport's known checkpoints)
-- Lane picker (standard / precheck / clear)
-- Wait time picker (tap-to-select time buckets: <5, 10, 20, 30, 45, 60, 60+)
-- Optional quick note text field
-- No account required. Single-tap submit.
+**Crowdsource Report** (via `POST /api/v1/reports`)
+- API-only endpoint for report submission (no dedicated UI page yet)
 
-**Admin** (`/admin` — auth-gated, internal only)
-- Feeds dashboard: list all feeds, status, reliability scores, last seen
-- Airports dashboard: registry management
-- Discovery log: what the scanner found, trial status
-- System health: overall uptime, data freshness across tiers
-- Manual feed add/test (escape hatch for edge cases)
+### 7.1b Views (Designed but Not Yet Implemented)
+
+- **Misery Map**: Full-viewport MapLibre GL map with color-coded airport dots (requires R2 for tiles)
+- **Report page** (`/report`): GPS-enabled wait time submission form
+- **Admin dashboard** (`/admin`): Feed management, discovery log, system health
+- **WebSocket real-time push** (`/ws/live`): Requires Durable Objects
+
+### 7.1c Dark Mode UI Design (Implemented)
+
+The application defaults to dark mode via `next-themes` with the following design system:
+
+**Glass morphism card system** (`.glass` CSS class):
+- Light mode: White background, subtle shadow, hover lift
+- Dark mode: `rgba(255, 255, 255, 0.03)` background, `backdrop-filter: blur(20px) saturate(1.2)`, inset highlight border, deep shadow
+
+**Atmospheric background** (`.mesh-bg`):
+- Three overlapping radial gradients: purple at top-left, blue at top-right, purple at bottom-center
+- Creates a subtle depth without distracting from content
+
+**Severity glow system** (`.glow-green`, `.glow-yellow`, `.glow-orange`, `.glow-red`):
+- Cards glow with the wait-time severity color (green/yellow/orange/red)
+- Glow intensifies on hover
+- Applied via `box-shadow` with color-matched rgba values
+
+**Gradient text** (`.gradient-text`):
+- Heading text: white to slate-400 vertical gradient in dark mode
+
+**Stagger animations** (`.stagger`):
+- Cards animate in sequentially with 40ms delays between each
+- `cubic-bezier(0.16, 1, 0.3, 1)` easing for smooth deceleration
+
+**Live pulse** (`glow-pulse` keyframe):
+- Pulsing opacity animation for live-data indicators
 
 ### 7.2 Design System
 
-| Element | Choice | Rationale |
-|---------|--------|-----------|
-| Component library | shadcn/ui | Beautiful defaults, fully customizable, Tailwind-native |
-| CSS framework | Tailwind CSS 4 | Utility-first, excellent DX, tree-shaking |
-| Map library | MapLibre GL JS | Free, open-source, Mapbox-quality, no per-request cost |
-| Map tiles | Protomaps (self-hosted on CF) or Stadia Maps free tier | $0 tile cost |
-| Charts | Recharts | Lightweight, React-native, good sparklines and area charts |
-| Search | cmdk | cmd+k airport search palette, modern UX pattern |
-| Animations | Framer Motion | Smooth transitions, dot pulsing, card reveals |
-| Theme | next-themes | System-detect + manual toggle, zero flash |
-| Font | Inter (body) + JetBrains Mono (data) | Clean, readable, free, monospace for numbers |
-| Icons | Lucide | Consistent, tree-shakeable, shadcn-native |
+| Element | Choice | Status |
+|---------|--------|--------|
+| CSS framework | Tailwind CSS 4 | Implemented |
+| Theme | next-themes (default: dark, system detection enabled) | Implemented |
+| Font | Inter (body) + JetBrains Mono (data) via CSS custom properties | Implemented |
+| Icons | Lucide React | Implemented |
+| Styling | Custom glass morphism + severity glow system (no component library) | Implemented |
+| Animations | CSS keyframes (stagger entrance, glow pulse) | Implemented |
+| Component library | shadcn/ui | Not yet added (using custom components) |
+| Map library | MapLibre GL JS + Protomaps | Not yet implemented |
+| Charts | Recharts | Not yet added (sparklines are custom SVG) |
+| Search | cmdk | Not yet added (custom search implementation) |
 
 ### 7.3 Color Scale (Wait Times)
 
-| Range | Color | Hex (Light) | Hex (Dark) |
-|-------|-------|-------------|------------|
-| 0-15 min | Green | #22c55e | #4ade80 |
-| 15-30 min | Yellow | #eab308 | #facc15 |
-| 30-60 min | Orange | #f97316 | #fb923c |
-| 60+ min | Red | #ef4444 | #f87171 |
+Defined as Tailwind CSS custom properties in `globals.css`:
+
+| Range | Color | CSS Property | Hex |
+|-------|-------|-------------|-----|
+| 0-15 min | Green (low) | `--color-wait-low` | #22c55e |
+| 15-30 min | Yellow (moderate) | `--color-wait-moderate` | #eab308 |
+| 30-60 min | Orange (high) | `--color-wait-high` | #f97316 |
+| 60+ min | Red (severe) | `--color-wait-severe` | #ef4444 |
+
+In dark mode, Tailwind's built-in dark variants are used (e.g., `text-green-400` for dark, `text-green-600` for light).
 
 ### 7.4 Responsive Breakpoints
 
@@ -678,179 +706,145 @@ CREATE TABLE report_rate_limits (
 
 ---
 
-## 8. Project Structure
+## 8. Project Structure (Current Implementation)
 
 ```
 src/
-├── app/                          Next.js App Router (frontend)
-│   ├── (public)/                 public-facing routes
-│   │   ├── page.tsx              hero misery map
-│   │   ├── airport/[code]/
-│   │   │   └── page.tsx          airport detail view
-│   │   └── report/
-│   │       └── page.tsx          submit wait time
-│   ├── admin/                    internal admin routes
-│   │   ├── page.tsx              dashboard overview
-│   │   ├── feeds/page.tsx        feed management
-│   │   ├── airports/page.tsx     airport registry
-│   │   ├── discovery/page.tsx    discovery log
-│   │   └── health/page.tsx       system health
-│   ├── api/                      API route handlers
-│   │   └── v1/
-│   │       ├── airports/
-│   │       ├── map/
-│   │       ├── reports/
-│   │       ├── stats/
-│   │       ├── ws/
-│   │       └── health/
-│   ├── layout.tsx                root layout (theme, nav)
-│   └── globals.css               Tailwind base styles
+├── app/                              Next.js App Router
+│   ├── page.tsx                      Homepage (airport grid with stats)
+│   ├── layout.tsx                    Root layout (dark mode, ThemeProvider, nav, footer)
+│   ├── globals.css                   Dark mode glass morphism + animation styles
+│   ├── airports/[code]/
+│   │   └── page.tsx                  Airport detail page
+│   └── api/v1/                       REST API route handlers
+│       ├── airports/route.ts         GET /airports
+│       ├── airports/[code]/route.ts  GET /airports/:code
+│       ├── airports/[code]/live/     GET /airports/:code/live
+│       ├── airports/[code]/predict/  GET /airports/:code/predict
+│       ├── airports/[code]/history/  GET /airports/:code/history (dual-mode)
+│       ├── airports/[code]/checkpoints/  GET /airports/:code/checkpoints
+│       ├── cron/route.ts             Internal cron trigger endpoint
+│       ├── health/route.ts           System health check
+│       ├── map/overview/route.ts     Map overview data
+│       ├── map/worst/route.ts        Worst airports
+│       ├── reports/route.ts          POST crowdsource reports
+│       └── stats/national/route.ts   National statistics
 │
-├── workers/                      Cloudflare Workers
+├── workers/                          Background processing
+│   ├── scheduled.ts                  Cron entry point (routes triggers + hourly rollup)
 │   ├── ingestion/
-│   │   ├── poll-feeds.ts         main polling orchestrator
-│   │   ├── process-reading.ts    normalize + validate + store
-│   │   └── fusion.ts            multi-source data fusion
+│   │   ├── poll-feeds.ts             Main polling orchestrator
+│   │   ├── process-reading.ts        Normalize + validate + store
+│   │   └── fusion.ts                 Multi-source data fusion
 │   ├── prediction/
-│   │   ├── demand-model.ts       flight-based demand estimation
-│   │   ├── historical-model.ts   day/time/season patterns
-│   │   └── combine.ts           ensemble prediction
+│   │   └── run-predictions.ts        ML prediction engine
 │   ├── discovery/
-│   │   ├── scanner.ts            probe airports for new feeds
-│   │   ├── validator.ts          test discovered feeds
-│   │   └── faa-sync.ts          FAA registry sync
+│   │   ├── scanner.ts                Probe airports for new feeds
+│   │   └── validator.ts              Trial feed evaluation
 │   ├── health/
-│   │   ├── monitor.ts            feed health tracking
-│   │   └── self-heal.ts         auto-recovery logic
-│   └── realtime/
-│       └── airport-hub.ts        Durable Object WebSocket pub/sub
+│   │   ├── monitor.ts                Feed health tracking
+│   │   └── self-heal.ts              Auto-recovery logic
+│   └── durable-objects/
+│       └── airport-hub.ts            WebSocket hub (NOT currently deployed)
 │
-├── lib/                          shared libraries
-│   ├── adapters/                 feed adapters
-│   │   ├── base.ts
-│   │   ├── bliptrack.ts
-│   │   ├── xovis.ts
-│   │   ├── airport-json.ts
-│   │   ├── airport-html.ts
-│   │   ├── dynamic-json.ts
-│   │   ├── faa-swim.ts
-│   │   ├── flightaware.ts
-│   │   ├── noaa.ts
-│   │   ├── tsa-throughput.ts
-│   │   └── crowdsource.ts
-│   ├── registry/                 feed + airport registries
-│   │   ├── feeds.ts
-│   │   ├── airports.ts
-│   │   └── checkpoints.ts
-│   ├── db/                       database clients + queries
-│   │   ├── d1.ts                 Cloudflare D1 client + queries
-│   │   └── kv.ts                 Cloudflare KV cache helpers
-│   ├── types/                    shared TypeScript types
-│   │   ├── reading.ts
-│   │   ├── airport.ts
-│   │   ├── feed.ts
-│   │   ├── prediction.ts
-│   │   └── api.ts
-│   └── utils/
-│       ├── geo.ts                geolocation helpers
-│       ├── time.ts               timezone + formatting
-│       ├── confidence.ts         confidence scoring
-│       ├── colors.ts             wait time → color mapping
-│       └── validation.ts         input validation
+├── lib/                              Shared libraries
+│   ├── adapters/                     13 feed adapters
+│   │   ├── base.ts                   FeedAdapter interface
+│   │   ├── registry.ts               Adapter lookup
+│   │   ├── bliptrack.ts              BlipTrack/Veovo sensors
+│   │   ├── xovis.ts                  Xovis 3D sensors
+│   │   ├── airport-json.ts           Generic JSON feeds
+│   │   ├── airport-html.ts           HTML scraping
+│   │   ├── dynamic-json.ts           Config-driven JSONPath mapper
+│   │   ├── faa-swim.ts               FAA SWIM stream
+│   │   ├── flightaware.ts            FlightAware AeroAPI
+│   │   ├── noaa.ts                   NOAA weather
+│   │   ├── tsa-throughput.ts         TSA passenger data
+│   │   ├── traytable.ts              TrayTable data
+│   │   └── crowdsource.ts            User reports
+│   ├── db/
+│   │   ├── d1.ts                     D1 queries
+│   │   └── kv.ts                     KV cache helpers
+│   ├── types/
+│   │   └── feed.ts                   Feed, adapter, discovery types
+│   └── utils/                        Trend, validation, color utilities
 │
-├── components/                   React components
-│   ├── map/
-│   │   ├── MiseryMap.tsx
-│   │   ├── AirportDot.tsx
-│   │   ├── AirportTooltip.tsx
-│   │   ├── MapLegend.tsx
-│   │   └── MapControls.tsx
+├── components/                       React components
 │   ├── airport/
-│   │   ├── AirportHeader.tsx
-│   │   ├── CheckpointCard.tsx
-│   │   ├── LaneBar.tsx
-│   │   ├── WaitTrend.tsx
-│   │   ├── PredictionChart.tsx
-│   │   ├── ArrivalCalculator.tsx
-│   │   ├── FlightStatusBar.tsx
-│   │   ├── RecentReports.tsx
-│   │   └── TipsSection.tsx
-│   ├── report/
-│   │   ├── ReportForm.tsx
-│   │   ├── CheckpointPicker.tsx
-│   │   ├── LanePicker.tsx
-│   │   ├── WaitTimePicker.tsx
-│   │   └── QuickNote.tsx
-│   ├── feed/
-│   │   ├── DataTierBadge.tsx
-│   │   ├── FreshnessIndicator.tsx
-│   │   ├── ConfidenceMeter.tsx
-│   │   └── SourceAttribution.tsx
+│   │   ├── airport-card.tsx          Airport card (glass morphism + glow)
+│   │   └── checkpoint-row.tsx        Checkpoint detail row
 │   ├── layout/
-│   │   ├── TopNav.tsx
-│   │   ├── SearchCommand.tsx
-│   │   ├── ThemeToggle.tsx
-│   │   ├── BottomTicker.tsx
-│   │   └── Footer.tsx
+│   │   ├── top-nav.tsx               Navigation bar
+│   │   └── footer.tsx                Page footer
+│   ├── search/                       Search components
 │   └── shared/
-│       ├── TrendArrow.tsx
-│       ├── ColorScale.tsx
-│       ├── PulseAnimation.tsx
-│       ├── Skeleton.tsx
-│       └── ErrorBoundary.tsx
-│
-├── hooks/                        React hooks
-│   ├── useAirport.ts
-│   ├── useWebSocket.ts
-│   ├── useGeolocation.ts
-│   ├── useTheme.ts
-│   └── useMapInteraction.ts
-│
-├── data/                         static seed data
-│   ├── airports.json             FAA NPIAS airport database
-│   ├── checkpoints.json          known checkpoint definitions
-│   └── feeds.seed.json           initial feed configurations
-│
-└── config/
-    ├── feeds.config.ts           feed polling settings
-    ├── adapters.config.ts        adapter registry
-    ├── prediction.config.ts      model parameters
-    └── discovery.config.ts       discovery scan patterns
+│       ├── data-tier-badge.tsx        LIVE / NEAR-LIVE / PREDICTED badge
+│       ├── wait-badge.tsx             Wait time display with severity color
+│       └── sparkline.tsx              Inline sparkline chart
+
+migrations/
+├── 0001_initial_schema.sql            Core tables (airports, checkpoints, feeds, readings, etc.)
+└── 0002_readings_rollup.sql           Hourly rollup table
+
+scripts/
+├── inject-cron.mjs                    Post-build cron handler injection
+├── seed-airports.ts                   Airport registry seeder
+└── seed-dev-data.ts                   Development data seeder
+
+tests/
+└── api/health.test.ts                 Health endpoint test
+
+.github/workflows/deploy.yml           CI/CD pipeline
+wrangler.jsonc                         Cloudflare bindings and cron config
 ```
 
 ---
 
 ## 9. Hosting & Deployment
 
-### 9.1 Infrastructure (100% Cloudflare)
+### 9.1 Infrastructure (Current Deployment)
 
-| Cloudflare Service | Purpose | Free Tier | Monthly Cost |
-|-------------------|---------|-----------|-------------|
-| Pages | Next.js frontend (SSR + static) | Unlimited requests + bandwidth | $0 |
-| Workers | API + cron ingestion + prediction | 100K req/day (~3M/mo) | $0 |
-| D1 | All data (readings, airports, feeds, reports) | 5GB, 5M reads/day, 100K writes/day | $0 |
-| Durable Objects | WebSocket pub/sub hubs | 100K req/day | $0 |
-| KV | Cache layer (current_waits, map overview) | 100K reads/day | $0 |
-| R2 | Map tiles, static assets | 10GB, 1M reads/mo | $0 |
-| Domain (preboard.ai) | .ai TLD | ~$80/year | ~$7/mo |
-| **Total at launch** | | | **~$7/mo** |
-| **Total at scale (100K MAU)** | Workers $5 + D1 $5 | | **~$17/mo** |
+| Cloudflare Service | Purpose | Status |
+|-------------------|---------|--------|
+| Workers | Next.js SSR + API + cron (via opennextjs-cloudflare) | Active |
+| D1 | All data (readings, airports, feeds, reports) | Active (`preboard-db`) |
+| KV | Cache layer (current_waits, map overview) | Active (`CACHE`) |
+| Workers Scheduled | Cron triggers (1min, 5min, hourly, 6-hourly) | Active |
+| Durable Objects | WebSocket pub/sub hubs | **Not deployed** (binding removed from wrangler.jsonc) |
+| R2 | Map tiles, static assets | **Not configured** |
 
-### 9.2 Deployment Pipeline
+### 9.2 Deployment Pipeline (GitHub Actions)
 
-- Git push to `main` → Cloudflare Pages auto-deploys frontend + workers
-- Preview deployments on every PR (Cloudflare Pages preview URLs)
-- D1 migrations via Wrangler CLI (`wrangler d1 migrations apply`)
-- Zero-downtime deploys (Cloudflare edge rollout)
-- Single CLI: `wrangler` manages everything (Pages, Workers, D1, KV, R2, DO)
+The CI/CD pipeline runs via `.github/workflows/deploy.yml`:
+
+1. Push to `main` triggers the workflow (also supports `workflow_dispatch`)
+2. A concurrency group (`deploy-production`) prevents overlapping deploys
+3. Steps:
+   - Checkout + Setup Node 22 + `npm ci`
+   - **Type check**: `npx tsc --noEmit` (fails the build on type errors)
+   - **D1 migrations**: `npx wrangler d1 migrations apply preboard-db --remote`
+   - **OpenNext build**: `npx opennextjs-cloudflare build`
+   - **Inject cron handler**: `node scripts/inject-cron.mjs` (see below)
+   - **Deploy**: `npx opennextjs-cloudflare deploy`
+
+#### Cron Injection Mechanism
+
+OpenNext generates `.open-next/worker.js` with only a `fetch` handler. Cloudflare cron triggers fire `scheduled` events. The `scripts/inject-cron.mjs` post-build script patches the worker to:
+
+1. Rename `export default {` to `const _worker = {`
+2. Insert an `async scheduled(controller, env, ctx)` handler that maps cron patterns to trigger types (`poll`, `predict`, `all`)
+3. Create a synthetic `Request` to `/api/v1/cron?trigger=<type>` and pass it to `_worker.fetch()` (no external HTTP call)
+4. Re-export as `export default _worker`
+
+Required GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
 
 ### 9.3 Monitoring
 
 - Cloudflare Analytics (free): request volume, error rates, performance
 - Cloudflare D1 Analytics: query performance, storage usage
 - Cloudflare Workers Analytics: invocation counts, CPU time, errors
-- Custom health endpoint (`/api/v1/health`): feed status, data freshness, system state
-- Webhook alerts to Slack/Discord for system-level issues
+- Custom health endpoint (`GET /api/v1/health`): returns system status, database health, and feed counts by status (active, trial, degraded, inactive)
+- Health endpoint returns version `0.2.0` and HTTP 503 when degraded
 
 ---
 
