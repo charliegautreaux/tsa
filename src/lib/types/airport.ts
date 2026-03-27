@@ -45,6 +45,8 @@ export interface AirportOverview {
   state: string | null;
   lat: number;
   lng: number;
+  size: AirportSize;
+  annual_pax: number;
   data_tier: DataTier;
   worst_wait: number | null;
   worst_trend: Trend | null;

@@ -1,6 +1,4 @@
-import { Fragment } from 'react';
-import { AirportCard } from "@/components/airport/airport-card";
-import { AdSlot } from '@/components/ads/ad-slot';
+import { AirportGrid } from "@/components/airport/airport-grid";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   getAirportOverview,
@@ -40,11 +38,11 @@ export default async function Home() {
     getSparklineData(env.DB),
   ]);
 
-  const sparklineMap = new Map<string, number[]>();
+  const sparklineMap: Record<string, number[]> = {};
   for (const row of sparklines) {
-    const arr = sparklineMap.get(row.airport_code) ?? [];
+    const arr = sparklineMap[row.airport_code] ?? [];
     arr.push(row.wait_minutes);
-    sparklineMap.set(row.airport_code, arr);
+    sparklineMap[row.airport_code] = arr;
   }
 
   return (
@@ -98,21 +96,7 @@ export default async function Home() {
           </p>
         </div>
       ) : (
-        <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {airports.map((airport, i) => (
-            <Fragment key={airport.iata}>
-              <AirportCard
-                airport={airport}
-                sparklineData={sparklineMap.get(airport.iata)}
-              />
-              {i === 7 && (
-                <div className="flex items-center justify-center sm:col-span-2 lg:col-span-3">
-                  <AdSlot id="home-feed-1" size="leaderboard" />
-                </div>
-              )}
-            </Fragment>
-          ))}
-        </div>
+        <AirportGrid airports={airports} sparklineMap={sparklineMap} />
       )}
     </main>
   );

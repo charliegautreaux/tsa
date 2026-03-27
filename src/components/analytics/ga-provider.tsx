@@ -2,7 +2,7 @@
 
 import Script from 'next/script';
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-0VL0KV6SVJ';
 
 export function GAProvider() {
   if (!GA_ID) return null;

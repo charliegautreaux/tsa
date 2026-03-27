@@ -24,7 +24,7 @@ export async function getAirportOverview(db: D1Database): Promise<AirportOvervie
   const result = await db
     .prepare(`
       SELECT
-        a.iata, a.name, a.city, a.state, a.lat, a.lng, a.data_tier,
+        a.iata, a.name, a.city, a.state, a.lat, a.lng, a.size, a.annual_pax, a.data_tier,
         MAX(cw.wait_minutes) as worst_wait,
         cw.trend as worst_trend
       FROM airports a
