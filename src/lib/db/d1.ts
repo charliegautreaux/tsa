@@ -565,3 +565,33 @@ export async function getNationalStats(db: D1Database): Promise<{
     tier_breakdown: tierRows.results,
   };
 }
+
+// ============================================================
+// HOURLY AVERAGES (for guide pages)
+// ============================================================
+
+export interface HourlyAverage {
+  hour: number;
+  avg_wait: number;
+  sample_count: number;
+}
+
+export async function getHourlyAverages(
+  db: D1Database,
+  airportCode: string
+): Promise<HourlyAverage[]> {
+  const result = await db
+    .prepare(`
+      SELECT
+        CAST(strftime('%H', hour) AS INTEGER) as hour,
+        ROUND(AVG(avg_wait), 1) as avg_wait,
+        SUM(sample_count) as sample_count
+      FROM readings_rollup
+      WHERE airport_code = ?1
+      GROUP BY CAST(strftime('%H', hour) AS INTEGER)
+      ORDER BY hour
+    `)
+    .bind(airportCode.toUpperCase())
+    .all<HourlyAverage>();
+  return result.results;
+}

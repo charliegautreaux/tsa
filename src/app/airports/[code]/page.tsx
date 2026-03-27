@@ -178,6 +178,12 @@ export default async function AirportDetailPage({
           {airport.city}, {airport.state} &middot; {sourcesActive} data source
           {sourcesActive !== 1 ? "s" : ""} active
         </p>
+        <Link
+          href={`/airports/${code}/guide`}
+          className="mt-2 inline-block text-sm text-purple-600 hover:underline dark:text-purple-400"
+        >
+          Read our complete {code} security guide →
+        </Link>
 
         {/* Airport-wide trend chart */}
         {airportTrend.length >= 2 && (
