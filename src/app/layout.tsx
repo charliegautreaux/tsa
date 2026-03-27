@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import { GAProvider } from "@/components/analytics/ga-provider";
+import { WebVitals } from "@/components/analytics/web-vitals";
 import { TopNav } from "@/components/layout/top-nav";
 import { Footer } from "@/components/layout/footer";
 import { CookieBanner } from "@/components/consent/cookie-banner";
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
         <GAProvider />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <WebVitals />
           <div className="mesh-bg">
             <TopNav />
             <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
