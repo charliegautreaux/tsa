@@ -30,32 +30,6 @@
     }
   ],
 
-  // R2 — map tiles, static assets
-  "r2_buckets": [
-    {
-      "binding": "TILES",
-      "bucket_name": "preboard-tiles"
-    }
-  ],
-
-  // Durable Objects — WebSocket hub per airport
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "AIRPORT_HUB",
-        "class_name": "AirportHub"
-      }
-    ]
-  },
-
-  // Durable Objects migrations
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["AirportHub"]
-    }
-  ],
-
   // Cron triggers for data ingestion
   "triggers": {
     "crons": [
@@ -68,6 +42,7 @@
 
   // Environment variables
   "vars": {
-    "ENVIRONMENT": "production"
+    "ENVIRONMENT": "production",
+    "NEXT_PUBLIC_SITE_URL": "https://preboard.cgautreauxnc.workers.dev"
   }
 }
