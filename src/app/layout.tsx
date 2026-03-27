@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
-import { GAProvider } from "@/components/analytics/ga-provider";
 import { WebVitals } from "@/components/analytics/web-vitals";
 import { TopNav } from "@/components/layout/top-nav";
 import { Footer } from "@/components/layout/footer";
@@ -47,10 +46,26 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6421284949564984"
           crossOrigin="anonymous"
         />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-0VL0KV6SVJ" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('consent', 'default', {
+                analytics_storage: 'denied',
+                ad_storage: 'denied',
+                ad_user_data: 'denied',
+                ad_personalization: 'denied',
+              });
+              gtag('config', 'G-0VL0KV6SVJ');
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
         <OrganizationJsonLd />
-        <GAProvider />
         <ThemeProvider attribute="class" forcedTheme="dark">
           <WebVitals />
           <div className="mesh-bg">
