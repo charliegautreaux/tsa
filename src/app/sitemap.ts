@@ -3,6 +3,8 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getAllAirports } from '@/lib/db/d1';
 import { getAllPosts } from '@/lib/content/blog';
 
+export const dynamic = 'force-dynamic';
+
 const BASE_URL = 'https://preboard.cgautreauxnc.workers.dev';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
