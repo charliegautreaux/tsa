@@ -3,8 +3,8 @@ export function OrganizationJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'PreBoard',
-    url: 'https://preboard.cgautreauxnc.workers.dev',
-    logo: 'https://preboard.cgautreauxnc.workers.dev/app-icon.svg',
+    url: 'https://preboard.ai',
+    logo: 'https://preboard.ai/app-icon.svg',
     description:
       'Real-time TSA security wait times for every US airport.',
   };

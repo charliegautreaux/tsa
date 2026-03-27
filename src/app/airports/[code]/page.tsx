@@ -154,7 +154,7 @@ export default async function AirportDetailPage({
       <WebPageJsonLd
         title={`TSA Wait Times at ${airport.name} (${code})`}
         description={`Live TSA security wait times at ${airport.name}.`}
-        url={`https://preboard.cgautreauxnc.workers.dev/airports/${code}`}
+        url={`https://preboard.ai/airports/${code}`}
       />
       <Link
         href="/"

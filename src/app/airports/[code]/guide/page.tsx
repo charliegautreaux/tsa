@@ -71,7 +71,7 @@ export default async function AirportGuidePage({
       <WebPageJsonLd
         title={`TSA Wait Times at ${airport.name}`}
         description={`Complete guide to TSA security at ${airport.name}.`}
-        url={`https://preboard.cgautreauxnc.workers.dev/airports/${code}/guide`}
+        url={`https://preboard.ai/airports/${code}/guide`}
       />
       <FAQJsonLd questions={faqQuestions} />
 

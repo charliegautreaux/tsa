@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { ThemeProvider } from "next-themes";
 import { GAProvider } from "@/components/analytics/ga-provider";
 import { WebVitals } from "@/components/analytics/web-vitals";
@@ -9,7 +10,7 @@ import { OrganizationJsonLd } from "@/components/seo/json-ld";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://preboard.cgautreauxnc.workers.dev'),
+  metadataBase: new URL('https://preboard.ai'),
   title: "PreBoard — Live TSA Wait Times",
   description:
     "Real-time TSA security line wait times for every US airport. Did you PreBoard?",
@@ -44,6 +45,11 @@ export default function RootLayout({
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-[#0c0c14] dark:text-gray-100">
         <OrganizationJsonLd />
         <GAProvider />
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6421284949564984"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         <ThemeProvider attribute="class" forcedTheme="dark">
           <WebVitals />
           <div className="mesh-bg">

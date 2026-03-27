@@ -45,7 +45,7 @@ export default async function BlogPostPage({
       <ArticleJsonLd
         title={post.title}
         description={post.description}
-        url={`https://preboard.cgautreauxnc.workers.dev/blog/${slug}`}
+        url={`https://preboard.ai/blog/${slug}`}
         datePublished={post.date}
       />
 
