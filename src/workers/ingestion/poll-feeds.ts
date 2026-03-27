@@ -1,7 +1,8 @@
-import { getActiveFeeds } from "@/lib/db/d1";
+import { getActiveFeeds, getAirport } from "@/lib/db/d1";
 import { getAdapter } from "@/lib/adapters/registry";
 import { processReadings } from "./process-reading";
 import type { FeedConfig } from "@/lib/types/feed";
+import { shouldPollNow } from "@/lib/config/polling.config";
 
 // Import all adapters to register them
 import "@/lib/adapters/crowdsource";
@@ -47,7 +48,13 @@ export async function pollFeeds(
     feedsByAirport.set(feed.airport_code, group);
   }
 
-  for (const [_airportCode, airportFeeds] of feedsByAirport) {
+  for (const [airportCode, airportFeeds] of feedsByAirport) {
+    // Tiered polling: skip airports whose interval hasn't elapsed
+    const airport = await getAirport(db, airportCode);
+    const size = airport?.size ?? "unknown";
+    const lastSuccess = (airportFeeds[0] as any).last_success_at ?? null;
+    if (!shouldPollNow(size, lastSuccess)) continue;
+
     const allReadings = [];
 
     for (const feed of airportFeeds) {
