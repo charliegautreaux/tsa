@@ -131,3 +131,26 @@ html {
   0%, 100% { opacity: 0.75; }
   50% { opacity: 1; }
 }
+
+/* ========================================
+   AD SLOT CLS PREVENTION
+   ======================================== */
+.ad-slot-leaderboard {
+  min-height: 90px;
+  max-width: 728px;
+  width: 100%;
+}
+.ad-slot-rectangle {
+  min-height: 250px;
+  max-width: 300px;
+  width: 100%;
+}
+.ad-slot-mobile-banner {
+  min-height: 50px;
+  max-width: 320px;
+  width: 100%;
+}
+.ad-slot-adhesion {
+  min-height: 50px;
+  width: 100%;
+}

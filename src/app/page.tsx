@@ -1,4 +1,6 @@
+import { Fragment } from 'react';
 import { AirportCard } from "@/components/airport/airport-card";
+import { AdSlot } from '@/components/ads/ad-slot';
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   getAirportOverview,
@@ -97,12 +99,18 @@ export default async function Home() {
         </div>
       ) : (
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {airports.map((airport) => (
-            <AirportCard
-              key={airport.iata}
-              airport={airport}
-              sparklineData={sparklineMap.get(airport.iata)}
-            />
+          {airports.map((airport, i) => (
+            <Fragment key={airport.iata}>
+              <AirportCard
+                airport={airport}
+                sparklineData={sparklineMap.get(airport.iata)}
+              />
+              {i === 7 && (
+                <div className="flex items-center justify-center sm:col-span-2 lg:col-span-3">
+                  <AdSlot id="home-feed-1" size="leaderboard" />
+                </div>
+              )}
+            </Fragment>
           ))}
         </div>
       )}

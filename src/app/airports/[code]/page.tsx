@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { CheckpointRow } from "@/components/airport/checkpoint-row";
 import { DataTierBadge } from "@/components/shared/data-tier-badge";
 import { Sparkline } from "@/components/shared/sparkline";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   getAirport,
@@ -186,6 +187,10 @@ export default async function AirportDetailPage({
             />
           </div>
         )}
+      </div>
+
+      <div className="my-6 flex justify-center">
+        <AdSlot id={`${code}-detail-1`} size="leaderboard" />
       </div>
 
       {/* Checkpoints */}
