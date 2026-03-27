@@ -20,6 +20,12 @@ export function TopNav() {
         <div className="flex items-center gap-3">
           <AirportSearch />
           <Link
+            href="/blog"
+            className="hidden text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white sm:block"
+          >
+            Blog
+          </Link>
+          <Link
             href="/report"
             className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 dark:shadow-[0_0_12px_rgba(59,130,246,0.2)]"
           >

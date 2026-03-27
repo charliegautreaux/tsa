@@ -6,6 +6,11 @@ export function Footer() {
           <p className="text-sm italic text-gray-500 dark:text-gray-400">
             Did you PreBoard?
           </p>
+          <div className="mt-3 flex gap-4 text-xs">
+            <a href="/blog" className="hover:text-gray-300">Blog</a>
+            <a href="/privacy" className="hover:text-gray-300">Privacy</a>
+            <a href="/disclosure" className="hover:text-gray-300">Disclosure</a>
+          </div>
           <p>
             <span className="font-medium text-gray-500 dark:text-gray-400">
               PreBoard
