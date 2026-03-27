@@ -3,6 +3,7 @@ import { ThemeProvider } from "next-themes";
 import { GAProvider } from "@/components/analytics/ga-provider";
 import { TopNav } from "@/components/layout/top-nav";
 import { Footer } from "@/components/layout/footer";
+import { CookieBanner } from "@/components/consent/cookie-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -46,6 +47,7 @@ export default function RootLayout({
               <div className="flex-1">{children}</div>
               <Footer />
             </div>
+            <CookieBanner />
           </div>
         </ThemeProvider>
       </body>
