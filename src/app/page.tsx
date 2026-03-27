@@ -8,6 +8,17 @@ import {
 import { Plane, Clock, Shield, AlertTriangle } from "lucide-react";
 import { getWaitSeverity } from "@/lib/utils/colors";
 import { cn } from "@/lib/utils/cn";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "PreBoard — Live TSA Wait Times for Every US Airport",
+  description:
+    "Real-time TSA security checkpoint wait times for 400+ US airports. See current lines, predictions, and trends. Did you PreBoard?",
+  openGraph: {
+    title: "PreBoard — Live TSA Wait Times",
+    description: "Real-time TSA security wait times for every US airport.",
+  },
+};
 
 export const dynamic = "force-dynamic";
 

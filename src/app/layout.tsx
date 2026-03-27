@@ -7,6 +7,7 @@ import { CookieBanner } from "@/components/consent/cookie-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://preboard.cgautreauxnc.workers.dev'),
   title: "PreBoard — Live TSA Wait Times",
   description:
     "Real-time TSA security line wait times for every US airport. Did you PreBoard?",

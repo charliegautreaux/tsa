@@ -21,9 +21,18 @@ export async function generateMetadata({
   params: Promise<{ code: string }>;
 }): Promise<Metadata> {
   const { code } = await params;
+  const upper = code.toUpperCase();
+  const { env } = await getCloudflareContext();
+  const airport = await getAirport(env.DB, upper);
+  const name = airport?.name ?? upper;
+
   return {
-    title: `${code.toUpperCase()} — PreBoard.ai`,
-    description: `TSA wait times at ${code.toUpperCase()}`,
+    title: `TSA Wait Times at ${name} (${upper}) — PreBoard`,
+    description: `Live TSA security line wait times at ${name}. Check current checkpoint status, predictions, and tips for ${upper}.`,
+    openGraph: {
+      title: `${upper} TSA Wait Times — PreBoard`,
+      description: `Real-time security wait times at ${name}.`,
+    },
   };
 }
 
